@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import unittest
 from typing import Any
@@ -42,15 +43,38 @@ class RequestEnvironmentMiddlewareTest(unittest.IsolatedAsyncioTestCase):
             params = CallToolRequestParams(
                 name="test",
                 arguments={"arg": "value"},
-                environment={
-                    "developer_token": "token",
-                    "auth_token": "shared-secret",
-                },
             )
+
+            # Mock the raw request body like FastMCP provides
+            request_body = {
+                "jsonrpc": "2.0",
+                "id": "test-id",
+                "method": "tools/call",
+                "params": {
+                    "name": "test",
+                    "arguments": {"arg": "value"},
+                    "environment": {
+                        "developer_token": "token",
+                        "auth_token": "shared-secret",
+                    },
+                },
+            }
+
+            fake_request = mock.Mock()
+            fake_request._body = json.dumps(request_body).encode("utf-8")
+            fake_request.headers = {}
+
+            fake_request_context = mock.Mock()
+            fake_request_context.request = fake_request
+
+            fake_fastmcp_context = mock.Mock()
+            fake_fastmcp_context.request_context = fake_request_context
+
             context = MiddlewareContext(
                 message=params,
                 method="tools/call",
                 type="request",
+                fastmcp_context=fake_fastmcp_context,
             )
 
             async def call_next(inner_context: MiddlewareContext[Any]) -> str:
@@ -74,12 +98,35 @@ class RequestEnvironmentMiddlewareTest(unittest.IsolatedAsyncioTestCase):
             params = CallToolRequestParams(
                 name="test",
                 arguments={},
-                environment={},
             )
+
+            # Mock the raw request body without auth token
+            request_body = {
+                "jsonrpc": "2.0",
+                "id": "test-id",
+                "method": "tools/call",
+                "params": {
+                    "name": "test",
+                    "arguments": {},
+                    "environment": {},
+                },
+            }
+
+            fake_request = mock.Mock()
+            fake_request._body = json.dumps(request_body).encode("utf-8")
+            fake_request.headers = {}
+
+            fake_request_context = mock.Mock()
+            fake_request_context.request = fake_request
+
+            fake_fastmcp_context = mock.Mock()
+            fake_fastmcp_context.request_context = fake_request_context
+
             context = MiddlewareContext(
                 message=params,
                 method="tools/call",
                 type="request",
+                fastmcp_context=fake_fastmcp_context,
             )
 
             async def call_next(inner_context: MiddlewareContext[Any]) -> str:
@@ -95,12 +142,35 @@ class RequestEnvironmentMiddlewareTest(unittest.IsolatedAsyncioTestCase):
             params = CallToolRequestParams(
                 name="test",
                 arguments={},
-                environment={"auth_token": "bad-token"},
             )
+
+            # Mock the raw request body with bad token
+            request_body = {
+                "jsonrpc": "2.0",
+                "id": "test-id",
+                "method": "tools/call",
+                "params": {
+                    "name": "test",
+                    "arguments": {},
+                    "environment": {"auth_token": "bad-token"},
+                },
+            }
+
+            fake_request = mock.Mock()
+            fake_request._body = json.dumps(request_body).encode("utf-8")
+            fake_request.headers = {}
+
+            fake_request_context = mock.Mock()
+            fake_request_context.request = fake_request
+
+            fake_fastmcp_context = mock.Mock()
+            fake_fastmcp_context.request_context = fake_request_context
+
             context = MiddlewareContext(
                 message=params,
                 method="tools/call",
                 type="request",
+                fastmcp_context=fake_fastmcp_context,
             )
 
             async def call_next(inner_context: MiddlewareContext[Any]) -> str:
@@ -116,10 +186,22 @@ class RequestEnvironmentMiddlewareTest(unittest.IsolatedAsyncioTestCase):
             params = CallToolRequestParams(
                 name="test",
                 arguments={},
-                environment={},
             )
 
+            # Mock the raw request body without auth token in environment
+            request_body = {
+                "jsonrpc": "2.0",
+                "id": "test-id",
+                "method": "tools/call",
+                "params": {
+                    "name": "test",
+                    "arguments": {},
+                    "environment": {},
+                },
+            }
+
             fake_request = mock.Mock()
+            fake_request._body = json.dumps(request_body).encode("utf-8")
             fake_request.headers = {"Authorization": "Bearer shared-secret"}
 
             fake_request_context = mock.Mock()
