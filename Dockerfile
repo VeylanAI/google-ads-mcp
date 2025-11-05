@@ -1,32 +1,31 @@
-FROM python:3.11-slim
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    VIRTUAL_ENV=/opt/venv
+    UV_COMPILE_BYTECODE=1 \
+    UV_TOOL_BIN_DIR=/usr/local/bin
 
-ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+    ARG APP_USER=appuser
+    ARG APP_UID=1000
+    ARG APP_GID=1000
 
-ARG APP_USER=appuser
-ARG APP_UID=1000
-ARG APP_GID=1000
+    RUN groupadd --system --gid ${APP_GID} ${APP_USER} \
+    && useradd --system --gid ${APP_GID} --uid ${APP_UID} --create-home ${APP_USER}
 
-ENV HOME=/home/${APP_USER}
+    RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
 
-RUN python -m venv "${VIRTUAL_ENV}" \
-    && groupadd --system --gid "$APP_GID" "$APP_USER" \
-    && useradd --system --uid "$APP_UID" --gid "$APP_GID" --home "$HOME" --create-home "$APP_USER"
+    COPY . /app
+    RUN --mount=type=cache,target=/root.cache/uv \
+    uv sync --locked --no-dev
 
-WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH"
 
-COPY pyproject.toml README.md MANIFEST.in /app/
-COPY ads_mcp /app/ads_mcp
+ENTRYPOINT [ ]
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+USER ${APP_USER}
 
-RUN chown -R "$APP_USER":"$APP_USER" /app "${VIRTUAL_ENV}"
-
-USER $APP_USER
-
-CMD ["google-ads-mcp"]
+CMD ["echo", "foo"]
