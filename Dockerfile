@@ -1,10 +1,5 @@
 FROM python:3.11-slim
 
-LABEL org.opencontainers.image.title="google-ads-mcp" \
-      org.opencontainers.image.description="MCP server for Google Ads" \
-      org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.source="https://github.com/googleads/google-ads-mcp"
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
