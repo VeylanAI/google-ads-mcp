@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
 import logging
 import os
 from typing import Any, Mapping as MappingType, Optional, Set
@@ -108,7 +109,21 @@ class RequestEnvironmentMiddleware(Middleware):
         context: MiddlewareContext[CallToolRequestParams],
         call_next: CallNext[CallToolRequestParams, Any],
     ) -> Any:
-        raw_environment = getattr(context.message, "environment", None)
+        # FastMCP strips the environment field during deserialization, so we need
+        # to parse it from the raw request body ourselves.
+        raw_environment = None
+        if context.fastmcp_context:
+            try:
+                request = context.fastmcp_context.request_context.request
+                if hasattr(request, "_body") and request._body:
+                    body_json = json.loads(request._body.decode("utf-8"))
+                    params = body_json.get("params", {})
+                    raw_environment = params.get("environment")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to extract environment from raw request body: {e}",
+                    exc_info=True,
+                )
 
         sanitized_environment: MappingType[str, Any] | None = None
         token_from_environment: Optional[str] = None
@@ -119,13 +134,6 @@ class RequestEnvironmentMiddleware(Middleware):
             if isinstance(raw_token, str):
                 token_from_environment = raw_token.strip() or None
             sanitized_environment = mutable_environment
-
-            # Attempt to strip the token from the request payload so downstream
-            # middleware cannot access it.
-            try:
-                context.message.environment = mutable_environment  # type: ignore[attr-defined]
-            except Exception:  # pragma: no cover - defensive
-                logger.debug("Failed to sanitize environment payload", exc_info=True)
 
         token = token_from_environment or _extract_header_token(context)
         _authorize_token(token)
