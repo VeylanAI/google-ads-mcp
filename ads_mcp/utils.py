@@ -50,7 +50,7 @@ def _get_developer_token() -> str:
     """Returns the developer token from the environment variable GOOGLE_ADS_DEVELOPER_TOKEN."""
     dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN")
     if dev_token is None:
-        raise ValueError(
+        logger.warning(
             "GOOGLE_ADS_DEVELOPER_TOKEN environment variable not set."
         )
     return dev_token
