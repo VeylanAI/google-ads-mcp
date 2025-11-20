@@ -1,18 +1,23 @@
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    UV_COMPILE_BYTECODE=1 \
-    UV_TOOL_BIN_DIR=/usr/local/bin
-
-WORKDIR /app
-
 ARG APP_USER=mcp
 ARG APP_UID=1000
 ARG APP_GID=1000
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_TOOL_BIN_DIR=/usr/local/bin \
+    UV_CACHE_DIR=/opt/uv-cache \
+    UV_PYTHON_INSTALL_DIR=/opt/uv-python
+
+WORKDIR /app
+
+
 RUN groupadd --system --gid "${APP_GID}" "${APP_USER}" \
-    && useradd --system --gid "${APP_GID}" --uid "${APP_UID}" --create-home "${APP_USER}"
+    && useradd --system --gid "${APP_GID}" --uid "${APP_UID}" --create-home "${APP_USER}" \
+    && mkdir -p "${UV_CACHE_DIR}" "${UV_PYTHON_INSTALL_DIR}" \
+    && chown -R "${APP_UID}:${APP_GID}" "${UV_CACHE_DIR}" "${UV_PYTHON_INSTALL_DIR}"
 
 COPY pyproject.toml uv.lock ./
 
@@ -23,7 +28,8 @@ COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev \
-    && chown -R "${APP_UID}:${APP_GID}" /app
+    && chown -R "${APP_UID}:${APP_GID}" /app "${UV_CACHE_DIR}" "${UV_PYTHON_INSTALL_DIR}"
+
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
