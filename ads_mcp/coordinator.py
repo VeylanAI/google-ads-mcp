@@ -19,6 +19,9 @@ server using `@mcp.tool` annotations, thereby 'coordinating' the bootstrapping
 of the server.
 """
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
+
+from ads_mcp.middleware import RequestEnvironmentMiddleware
 
 mcp = FastMCP("Google Ads Server")
+mcp.add_middleware(RequestEnvironmentMiddleware())
